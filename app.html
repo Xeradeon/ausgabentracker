@@ -1053,7 +1053,9 @@
       MONTH_NAMES[viewDate.getMonth()] + " " + viewDate.getFullYear();
 
     const monthEntries = entriesForMonth();
-    const manualTotal = monthEntries.reduce((s,e) => s + e.amount, 0);
+    const manualTotal = monthEntries
+  .filter(e => e.direction !== "credit")
+  .reduce((s,e) => s + e.amount, 0);
     const dueAbos = abosForMonth();
     const aboTotal = dueAbos.reduce((s,a) => s + a.amount, 0);
     const expenseTotal = manualTotal + aboTotal;
@@ -1282,7 +1284,9 @@
   function renderSummary(monthEntries, dueAbos, aboTotal) {
     const container = document.getElementById("summaryView");
     const totals = {};
-    monthEntries.forEach(e => { totals[e.cat] = (totals[e.cat]||0) + e.amount; });
+    monthEntries
+  .filter(e => e.direction !== "credit")
+  .forEach(e => { totals[e.cat] = (totals[e.cat]||0) + e.amount; });
     const maxSpent = Math.max(1, ...Object.values(totals));
 
     let html = `<div class="summary-note">Kategorie-Limits gelten für einzeln eingetragene Ausgaben. Abos zählen separat unten dazu.</div>`;
@@ -1331,6 +1335,10 @@
 
   function renderInsights(monthEntries, dueAbos, aboTotal) {
     const container = document.getElementById("insightsView");
+    monthEntries =
+  monthEntries.filter(
+    e => e.direction !== "credit"
+  );
     const totals = {};
     monthEntries.forEach(e => { totals[e.cat] = (totals[e.cat]||0) + e.amount; });
 
@@ -1396,7 +1404,12 @@
       const prevMonthDate = new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1);
       const prevKey = ymKey(prevMonthDate);
       const prevTotals = {};
-      entries.filter(e => e.date.slice(0,7) === prevKey).forEach(e => {
+      entries
+  .filter(e =>
+    e.date.slice(0,7) === prevKey &&
+    e.direction !== "credit"
+  )
+  .forEach(e => {
         prevTotals[e.cat] = (prevTotals[e.cat] || 0) + e.amount;
       });
       const cmpRows = [];
@@ -1439,7 +1452,12 @@
     }
     const trendTotals = trendMonths.map(d => {
       const key = ymKey(d);
-      return entries.filter(e => e.date.slice(0,7) === key).reduce((s,e) => s + e.amount, 0);
+      return entries
+  .filter(e =>
+    e.date.slice(0,7) === key &&
+    e.direction !== "credit"
+  )
+  .reduce((s,e) => s + e.amount, 0);
     });
     const trendMax = Math.max(1, ...trendTotals);
     let trendRows = "";
@@ -2435,6 +2453,10 @@ const enteredKey = await askBankSyncKey();
           "bank_" + item.transactionId,
         amount:
   Math.abs(Number(item.amount)),
+        direction:
+  item.direction === "credit"
+    ? "credit"
+    : "debit",
         cat:
           item.category,
         note:
