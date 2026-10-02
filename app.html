@@ -1102,7 +1102,9 @@
       (listDateFrom ? 1 : 0) +
       (listDateTo ? 1 : 0);
 
-    const filteredSum = filtered.reduce((s,e) => s + e.amount, 0);
+  const filteredSum = filtered
+  .filter(e => e.direction !== "credit")
+  .reduce((s,e) => s + e.amount, 0);
     const categoryOptions = CATEGORIES.map(cat =>
       `<option value="${cat.id}" ${listCategory === cat.id ? "selected" : ""}>${cat.icon} ${cat.label}</option>`
     ).join("");
@@ -1190,7 +1192,7 @@
                 <div class="entry-note">${escapeHtml(e.note || cat.label)}</div>
                 <div class="entry-cat">${cat.label}</div>
               </div>
-              <div class="entry-amount">${fmtMoney(e.amount)} €</div>
+              <div class="entry-amount" style="${e.direction === "credit" ? "color:var(--teal);" : ""}">${e.direction === "credit" ? "+" : ""}${fmtMoney(e.amount)} €</div>
               <button class="entry-del" data-id="${e.id}" aria-label="Löschen">✕</button>
             </div>`;
         });
