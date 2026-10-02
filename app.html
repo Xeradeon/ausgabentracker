@@ -1465,35 +1465,170 @@
         ${trendRows}
       </div>`;
 
-    // 5) Backup/Export
+    // 5) Backup / Export / Wiederherstellung
     bonusHtml += `
-      <button class="ghost-btn" id="exportDataBtn" style="margin-top:6px;">📥 Alle Daten als Datei exportieren</button>`;
+      <button class="ghost-btn" id="exportDataBtn" style="margin-top:6px;">
+        📥 Alle Daten als Datei exportieren
+      </button>
+
+      <button class="ghost-btn" id="restoreDataBtn" style="margin-top:10px;">
+        📤 Backup wiederherstellen
+      </button>
+
+      <input
+        type="file"
+        id="restoreDataFile"
+        accept=".json,application/json"
+        style="display:none;"
+      >`;
 
     container.innerHTML = bonusHtml;
-    const exportBtn = document.getElementById("exportDataBtn");
-    if (exportBtn) exportBtn.addEventListener("click", exportAllData);
+
+    const exportBtn =
+      document.getElementById("exportDataBtn");
+
+    if (exportBtn) {
+      exportBtn.addEventListener(
+        "click",
+        exportAllData
+      );
+    }
+
+    const restoreBtn =
+      document.getElementById("restoreDataBtn");
+
+    const restoreFile =
+      document.getElementById("restoreDataFile");
+
+    if (restoreBtn && restoreFile) {
+      restoreBtn.addEventListener(
+        "click",
+        () => restoreFile.click()
+      );
+
+      restoreFile.addEventListener(
+        "change",
+        restoreAllData
+      );
+    }
   }
 
   function exportAllData() {
     try {
       const payload = {
         exportedAt: new Date().toISOString(),
-        entries, abos, budgets, goals, salary
+        entries,
+        abos,
+        budgets,
+        goals,
+        salary
       };
-      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
+
+      const blob = new Blob(
+        [JSON.stringify(payload, null, 2)],
+        { type: "application/json" }
+      );
+
+      const url =
+        URL.createObjectURL(blob);
+
+      const a =
+        document.createElement("a");
+
       a.href = url;
-      a.download = "kassenbuch-export-" + new Date().toISOString().slice(0,10) + ".json";
+      a.download =
+        "kassenbuch-export-" +
+        new Date()
+          .toISOString()
+          .slice(0, 10) +
+        ".json";
+
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(url), 2000);
+
+      setTimeout(
+        () => URL.revokeObjectURL(url),
+        2000
+      );
     } catch (e) {
-      alert("Export leider fehlgeschlagen.");
+      alert(
+        "Export leider fehlgeschlagen."
+      );
     }
   }
 
+  async function restoreAllData(event) {
+    const file =
+      event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    try {
+      const text =
+        await file.text();
+
+      const data =
+        JSON.parse(text);
+
+      if (
+        !Array.isArray(data.entries) ||
+        !Array.isArray(data.abos) ||
+        !data.budgets ||
+        typeof data.budgets !== "object" ||
+        Array.isArray(data.budgets) ||
+        !Array.isArray(data.goals) ||
+        typeof data.salary !== "number"
+      ) {
+        throw new Error(
+          "Ungültiges Kassenbuch-Backup"
+        );
+      }
+
+      const confirmed =
+        confirm(
+          "Backup wiederherstellen?\n\n" +
+          "Die aktuell in dieser App gespeicherten " +
+          "Kassenbuchdaten werden durch das Backup ersetzt."
+        );
+
+      if (!confirmed) {
+        event.target.value = "";
+        return;
+      }
+
+      entries = data.entries;
+      abos = data.abos;
+      budgets = data.budgets;
+      goals = data.goals;
+      salary = data.salary;
+
+      saveEntriesLocal();
+      saveAbosLocal();
+      saveBudgetsLocal();
+      saveGoalsLocal();
+      saveSalaryLocal();
+
+      render();
+
+      alert(
+        "Backup erfolgreich wiederhergestellt."
+      );
+    } catch (error) {
+      console.log(
+        "Backup-Wiederherstellung fehlgeschlagen:",
+        error
+      );
+
+      alert(
+        "Das Backup konnte nicht wiederhergestellt werden."
+      );
+    } finally {
+      event.target.value = "";
+    }
+  }
   let upcomingHorizonDays = 30;
 
   function computeAboOccurrences(horizonDays) {
